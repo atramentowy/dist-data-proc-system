@@ -1,5 +1,6 @@
-import random
 from pathlib import Path
+import random
+import time
 
 def generate_test_file(filename, num_words=1000):
 	base_dir = Path(__file__).parent.parent  # wyjście z src/
@@ -18,3 +19,12 @@ def generate_test_file(filename, num_words=1000):
 				f.write(word + ' ')
 
 		print("plik testowy: wygenerowano pomyślnie")
+
+
+def measure_performance(func, *args):
+	start_time = time.time()
+
+	result = func(*args)
+	end_time = time.time()
+	execution_time = end_time - start_time
+	return result, execution_time
