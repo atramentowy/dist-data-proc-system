@@ -40,33 +40,25 @@ def run_worker(worker_id, host, port):
 	s = socket.socket()
 	s.connect((host, port))
 
-	print("worker połączony: " + str(worker_id))
-	result = "test1234"
+	print("[worker] połączony: " + str(worker_id))
 
-	payload = f"{worker_id}|{result}"
-	s.send(payload.encode())
+	while True:
+		msg = f"{worker_id}|GET_TASK\n"
+		s.send(msg.encode())
 
-	print("worker: wysłano wynik")
+		task = s.recv(1024).decode().strip()
+
+		if task == "NO_TASK":
+			print("[worker] brak zadan koncze")
+			break
+
+		print(f"[worker] {worker_id} robi: {task}")
+
+		result = process_file(task)
+
+		payload = f"{worker_id}|{result}\n"
+		s.send(payload.encode())
+
+		ack = s.recv(1024).decode().strip()
 
 	s.close()
-
-# import socket
-# import time
-#
-#
-# def worker(worker_id, queue):
-# 	s = socket.socket()
-# 	s.connect(("127.0.0.1", 5000))
-#
-#     time.sleep(1 + worker_id) # symulacja pracy
-#     result = f"wynik {worker_id}"
-#
-#     queue.put((worker_id, result))
-# 	s.close()
-
-
-# map phase
-# receive text
-# split words
-# count words
-# send dict back

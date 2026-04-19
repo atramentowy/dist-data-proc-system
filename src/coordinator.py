@@ -6,32 +6,29 @@ from pathlib import Path
 import utils
 from worker import run_worker
 
+
 class ResultCollector:
-	def __init__(self, expected_workers):
-		self.results = {}
-		self.expected_workers = expected_workers
+	def __init__(self, expected_results):
+		self.results = []
+		self.expected_results = expected_results
 		self.lock = threading.Lock()
 		self.complete_event = threading.Event()
 
 	def add_result(self, worker_id, result):
 		with self.lock:
-			self.results[worker_id] = result
-			if len(self.results) == self.expected_workers:
+			# self.results[worker_id] = result
+			self.results.append(result)
+			if len(self.results) == self.expected_results:
 				self.complete_event.set()
 
-
-# def worker(worker_id, queue):
-#     time.sleep(1 + worker_id)  # symulacja pracy
-#     result = f"wynik {worker_id}"
-#     queue.put((worker_id, result))
 
 def start_workers(num_workers, coord_host, coord_port):
 	processes = []
 
-	for worker_id in range(num_workers):
+	for w_id in range(num_workers):
 		p = mp.Process(
 			target=run_worker,
-			args=(worker_id, coord_host, coord_port)
+			args=(w_id, coord_host, coord_port)
 		)
 
 		p.start()
@@ -53,20 +50,53 @@ def run_coordinator():
 	files = list(data_dir.glob("*.txt"))
 
 	if not files:
-		print("błąd pliku: brak plików w folderze")
+		print("[coordinator] błąd pliku: brak plików w folderze")
 		return
 
 	# Rodzielanie pracy
-	# metoda: round-robin
 	workers = 2
 
-	assignments = [[] for _ in range(workers)]
+	# round-robin
+	assignments = [files[i::workers] for i in range(workers)]
 
-	for i, file in enumerate(files):
-		assignments[i % workers].append(file)
+	collector = ResultCollector(len(files))
 
-	# result collector
-	collector = ResultCollector(workers)
+	lock = threading.Lock()
+
+	def get_task(_worker_id):
+		with lock:
+			if assignments[_worker_id]:
+				return assignments[_worker_id].pop()
+			return None
+
+	def handle_worker(_conn, _addr, _collector):
+		print("[coordinator] worker connected:", _addr)
+
+		while True:
+			msg = _conn.recv(1024).decode().strip()
+
+			if "|" not in msg:
+				continue
+
+			_worker_id, message = msg.split("|", 1)
+			_worker_id = int(_worker_id)
+
+			# worker prosi o task
+			if message == "GET_TASK":
+				_task = get_task(_worker_id)
+
+				if _task is not None:
+					_conn.send(str(_task).encode())
+				else:
+					_conn.send(str("NO_TASK").encode())
+					break
+
+			# worker wysyła wynik
+			else:
+				_collector.add_result(_worker_id, message)
+				_conn.send("OK\n".encode())
+
+		_conn.close()
 
 	# tcp server
 	coord_host = "127.0.0.1"
@@ -76,38 +106,22 @@ def run_coordinator():
 	s.bind((coord_host, coord_port))
 	s.listen(workers)
 
-	print("serwer uruchomiony na: ", coord_host, coord_port)
+	print("[coordinator] serwer uruchomiony na: ", coord_host, coord_port)
 
 	# start workerów
 	processes = start_workers(workers, coord_host, coord_port)
 
-	try:
-		for _ in range(workers):
-			conn, addr = s.accept()
+	for i in range(workers):
+		conn, addr = s.accept()
+		threading.Thread(
+			target=handle_worker,
+			args=(conn, addr, collector),
+			daemon=True
+		).start()
 
-			conn.settimeout(5)
-			data = conn.recv(4096).decode()
+	collector.complete_event.wait()
+	print(collector.results)
 
-			if "|" not in data:
-				print("BŁĘDNE DANE:", data)
-				continue
-
-			try:
-				worker_id_str, result_str = data.split("|", 1)
-			except ValueError:
-				print("uszkodzone dane:", data)
-				continue
-
-			worker_id = int(worker_id_str)
-
-			collector.add_result(worker_id, result_str)
-
-	finally:
-		s.close()
-
-	print("wyniki: ", collector.results)
-
-	# zakończ procesy workerów
 	for p in processes:
 		p.join()
 
