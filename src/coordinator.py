@@ -1,9 +1,9 @@
 import socket
 import threading
+import time
+import utils
 import multiprocessing as mp
 from pathlib import Path
-
-import utils
 from worker import run_worker
 
 
@@ -37,10 +37,12 @@ def start_workers(num_workers, coord_host, coord_port):
 	return processes
 
 
-def run_coordinator():
+def run_coordinator(workers=2):
+	total_start = time.perf_counter()
+
 	# Generowanie plików testowych
-	utils.generate_test_file("data1", 1000)
-	utils.generate_test_file("data2", 1000)
+	# utils.generate_test_file("data1", 1000)
+	# utils.generate_test_file("data2", 1000)
 
 	# Ścieżki
 	base_dir = Path(__file__).parent.parent  # wyjscie z src
@@ -54,8 +56,6 @@ def run_coordinator():
 		return
 
 	# Rodzielanie pracy
-	workers = 2
-
 	# round-robin
 	assignments = [files[i::workers] for i in range(workers)]
 
@@ -70,7 +70,7 @@ def run_coordinator():
 			return None
 
 	def handle_worker(_conn, _addr, _collector):
-		print("[coordinator] worker connected:", _addr)
+		print("[coordinator] worker połączony:", _addr)
 
 		while True:
 			msg = _conn.recv(1024).decode().strip()
@@ -90,26 +90,26 @@ def run_coordinator():
 				else:
 					_conn.send(str("NO_TASK").encode())
 					break
-
-			# worker wysyła wynik
-			else:
-				_collector.add_result(_worker_id, message)
+			elif message.startswith("RESULT|"):
+				import json
+				result = json.loads(message.split("|", 1)[1])
+				_collector.add_result(_worker_id, result)
 				_conn.send("OK\n".encode())
 
 		_conn.close()
 
 	# tcp server
-	coord_host = "127.0.0.1"
-	coord_port = 5000
+	host = "127.0.0.1"
+	port = 5000
 
 	s = socket.socket()
-	s.bind((coord_host, coord_port))
+	s.bind((host, port))
 	s.listen(workers)
 
-	print("[coordinator] serwer uruchomiony na: ", coord_host, coord_port)
+	print("[coordinator] serwer uruchomiony na: ", host, port)
 
 	# start workerów
-	processes = start_workers(workers, coord_host, coord_port)
+	processes = start_workers(workers, host, port)
 
 	for i in range(workers):
 		conn, addr = s.accept()
@@ -119,11 +119,37 @@ def run_coordinator():
 			daemon=True
 		).start()
 
-	collector.complete_event.wait()
-	print(collector.results)
+	map_start = time.perf_counter()
 
+	collector.complete_event.wait()
+
+	map_end = time.perf_counter()
+
+	# zamknij procesy workerów
 	for p in processes:
 		p.join()
+
+	reduce_start = time.perf_counter()
+	# REDUCE
+	word_count = utils.merge_results(collector.results)
+	word_count = utils.top_k_words(word_count)
+	#
+	reduce_end = time.perf_counter()
+
+	total_end = time.perf_counter()
+
+	# METRYKI
+	map_time = map_end - map_start
+	reduce_time = reduce_end - reduce_start
+	total_time = total_end - total_start
+
+	# WYNIKI
+	print("TOP 20:", word_count)
+	print(f"MAP time:     {map_time:.6f}s")
+	print(f"REDUCE time:  {reduce_time:.6f}s")
+	print(f"TOTAL time:   {total_time:.6f}s")
+
+	return word_count, total_time, map_time, reduce_time
 
 
 if __name__ == "__main__":

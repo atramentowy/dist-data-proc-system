@@ -1,8 +1,10 @@
 from pathlib import Path
 import random
-import time
+import string
+
 
 def generate_test_file(filename, num_words=1000):
+	# Ścieżki
 	base_dir = Path(__file__).parent.parent  # wyjście z src/
 	folder = base_dir / "dane"
 
@@ -21,10 +23,57 @@ def generate_test_file(filename, num_words=1000):
 		print("plik testowy: wygenerowano pomyślnie")
 
 
-def measure_performance(func, *args):
-	start_time = time.time()
+def count_words(words):
+	counts = {}
 
-	result = func(*args)
-	end_time = time.time()
-	execution_time = end_time - start_time
-	return result, execution_time
+	for word in words:
+		if word in counts:
+			counts[word] += 1
+		else:
+			counts[word] = 1
+
+	return counts
+
+
+def process_file(filepath):  # MAP
+	try:
+		with open(filepath, "r", encoding="utf-8") as f:
+			text = f.read()
+
+			# Małe litery
+			text = text.lower()
+
+			# Usuniecie interpunkcji
+			text = text.translate(str.maketrans("", "", string.punctuation))
+
+			# Tokenizacja
+			words = text.split()
+
+			# Usuwanie liczb
+			# Usuwa tokeny będące tylko liczbami, pozostawia ciągi alfanumeryczne
+			words = [w for w in words if not w.isdigit()]
+
+			# Zliczanie słów
+			counts = count_words(words)
+
+			return counts
+
+	except Exception as e:
+		print("błąd pliku: ", filepath, e)
+		return {}
+
+
+def merge_results(results):  # REDUCE
+	_final = {}
+
+	for result in results:
+		for key, value in result.items():
+			_final[key] = _final.get(key, 0) + value
+
+	return _final
+
+
+def top_k_words(data, k=20):
+	return dict(
+		sorted(data.items(), key=lambda x: x[1], reverse=True)[:k]
+	)
