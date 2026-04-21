@@ -1,8 +1,8 @@
 param(
-    [int]$LargeFileCount = 10,
-    [int]$LargeFileSizeMB = 3,
-    [int]$DiverseFileCount = 10,
-    [string]$OutputDir = ".\student_datasets"
+    [int]$LargeFileCount = 20,
+    [int]$LargeFileSizeMB = 10,
+    [int]$DiverseFileCount = 0,
+    [string]$OutputDir = ".\large_dataset"
 )
 
 $ErrorActionPreference = 'Stop'

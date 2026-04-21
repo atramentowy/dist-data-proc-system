@@ -1,21 +1,19 @@
 from sequential import run_sequential
 from coordinator import run_coordinator
-import utils
-
-
 # import utils
 
+
 def benchmark():
-
-
 	# Generowanie małego zestawu danych
-	utils.generate_test_file("data1", 1000)
-	utils.generate_test_file("data2", 1000)
+	# utils.generate_test_file("data1", 1000)
+	# utils.generate_test_file("data2", 1000)
+
+	print("program started")
 
 	datasets = [
-		"data/dataset_small",
-		"data/student_datasets/dataset_diverse",
-		"data/student_datasets/dataset_large"
+		"data/small_dataset",
+		"data/medium_dataset",
+		"data/large_dataset"
 	]
 
 	verbose = False
