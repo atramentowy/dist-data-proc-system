@@ -9,7 +9,9 @@ def run_sequential(data_dir=None, verbose=False):
 	# Ścieżki
 	base_dir = Path(__file__).parent.parent  # wyjscie z src
 	if data_dir is None:
-		data_path = base_dir / "dane"
+		# data_path = base_dir / "data"
+		print("data dir error")
+		return
 	else:
 		data_path = (base_dir / data_dir).resolve()
 

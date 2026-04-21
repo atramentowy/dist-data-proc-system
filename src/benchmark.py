@@ -1,28 +1,34 @@
 from sequential import run_sequential
 from coordinator import run_coordinator
+import utils
 
 
 # import utils
 
 def benchmark():
-	# Generowanie plików testowych
-	# utils.generate_test_file("data1", 1000)
-	# utils.generate_test_file("data2", 1000)
+
+
+	# Generowanie małego zestawu danych
+	utils.generate_test_file("data1", 1000)
+	utils.generate_test_file("data2", 1000)
 
 	datasets = [
-		# "dane",  # domyślny folder
-		"dane/student_datasets/dataset_diverse",
-		"dane/student_datasets/dataset_large"
+		"data/dataset_small",
+		"data/student_datasets/dataset_diverse",
+		"data/student_datasets/dataset_large"
 	]
 
 	verbose = False
 
 	for dataset in datasets:
+		results = {}
+
 		avg_seq = {
 			"seq_total": 0,
 			"seq_map": 0,
 			"seq_reduce": 0,
-			"runs": 0
+			"runs": 0,
+
 		}
 
 		avg_par = {
@@ -65,6 +71,8 @@ def benchmark():
 			worker_counts = [1, 2, 4]
 			for workers in worker_counts:
 				word_count, par_total, par_map, par_reduce = run_coordinator(workers, data_dir=dataset)
+
+				results = word_count
 
 				avg_par[workers]["par_total"] += par_total
 				avg_par[workers]["par_map"] += par_map
@@ -129,6 +137,11 @@ def benchmark():
 			print(f"Map:     {stats['par_map']:.4f}s  (Speedup: {avg_speedup_map:.2f}x)")
 			print(f"Reduce:  {stats['par_reduce']:.4f}s  (Speedup: {avg_speedup_reduce:.2f}x)")
 			print(f"Efficiency: {efficiency * 100:.2f}%")
+
+		# DATASET RESULTS:
+		print(f"\n=== Results: ===")
+		for key, value in results.items():
+			print(key, value)
 
 
 if __name__ == "__main__":

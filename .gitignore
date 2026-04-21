@@ -4,5 +4,6 @@ __pycache__/
 .idea/
 .vscode/
 
-# dane
-dane/
+# data
+data/dataset_small/
+data/student_datasets/

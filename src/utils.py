@@ -4,24 +4,31 @@ import string
 
 
 def generate_test_file(filename, num_words=1000):
-	# Ścieżki
-	base_dir = Path(__file__).parent.parent  # wyjście z src/
-	folder = base_dir / "dane"
+	base_dir = Path(__file__).parent.parent
+	folder = base_dir / "data" / "dataset_small"
 
-	folder.mkdir(exist_ok=True)
+	folder.mkdir(parents=True, exist_ok=True)
 
-	filepath = folder / f"{filename}.txt"  # pełna ścieżka
-	if not filepath.is_file():
-		print("plik testowy: generuję")
+	filepath = folder / f"{filename}.txt"
 
-		words = ['python', 'programming', 'distributed', 'system', 'data', 'processing', 'parallel', 'computing']
-		with open(filepath, 'w') as f:
-			for _ in range(num_words):
-				word = random.choice(words)
-				f.write(word + ' ')
+	if filepath.is_file():
+		print("plik testowy: już istnieje")
+		return filepath
 
-		print("plik testowy: wygenerowano pomyślnie")
+	print("plik testowy: generuję")
 
+	words = [
+		'python', 'programming', 'distributed', 'system',
+		'data', 'processing', 'parallel', 'computing'
+	]
+
+	with open(filepath, 'w') as f:
+		for _ in range(num_words):
+			f.write(random.choice(words) + ' ')
+
+	print("plik testowy: wygenerowano pomyślnie")
+
+	return filepath
 
 def count_words(words):
 	counts = {}
