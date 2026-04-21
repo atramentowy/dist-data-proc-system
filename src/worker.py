@@ -2,23 +2,26 @@ import socket
 import json
 import utils
 
-def run_worker(worker_id, host, port):
+def run_worker(worker_id, host, port, verbose=False):
 	s = socket.socket()
 	s.connect((host, port))
 
-	print(f"[worker] {worker_id} połączony")
+	if verbose:
+		print(f"[worker] {worker_id} połączony")
 
 	while True:
 		msg = f"{worker_id}|GET_TASK\n"
 		s.send(msg.encode())
 
-		task = s.recv(1024).decode().strip()
+		task = s.recv(4096).decode().strip()
 
 		if task == "NO_TASK":
-			print("[worker] brak zadań, rozłączam")
+			if verbose:
+				print("[worker] brak zadań, rozłączam")
 			break
 
-		print(f"[worker] {worker_id} robi: {task}")
+		if verbose:
+			print(f"[worker] {worker_id} robi: {task}")
 
 		result = utils.process_file(task)
 

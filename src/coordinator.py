@@ -37,19 +37,18 @@ def start_workers(num_workers, coord_host, coord_port):
 	return processes
 
 
-def run_coordinator(workers=2):
+def run_coordinator(workers=2, data_dir=None, verbose=False):
 	total_start = time.perf_counter()
-
-	# Generowanie plików testowych
-	# utils.generate_test_file("data1", 1000)
-	# utils.generate_test_file("data2", 1000)
 
 	# Ścieżki
 	base_dir = Path(__file__).parent.parent  # wyjscie z src
-	data_dir = base_dir / "dane"
+	if data_dir is None:
+		data_path = base_dir / "dane"
+	else:
+		data_path = (base_dir / data_dir).resolve()
 
 	# Wczytywanie plików
-	files = list(data_dir.glob("*.txt"))
+	files = list(data_path.glob("*.txt"))
 
 	if not files:
 		print("[coordinator] błąd pliku: brak plików w folderze")
@@ -70,10 +69,11 @@ def run_coordinator(workers=2):
 			return None
 
 	def handle_worker(_conn, _addr, _collector):
-		print("[coordinator] worker połączony:", _addr)
+		if verbose:
+			print("[coordinator] worker połączony:", _addr)
 
 		while True:
-			msg = _conn.recv(1024).decode().strip()
+			msg = _conn.recv(4096).decode().strip()
 
 			if "|" not in msg:
 				continue
@@ -106,7 +106,8 @@ def run_coordinator(workers=2):
 	s.bind((host, port))
 	s.listen(workers)
 
-	print("[coordinator] serwer uruchomiony na: ", host, port)
+	if verbose:
+		print("[coordinator] serwer uruchomiony na: ", host, port)
 
 	# start workerów
 	processes = start_workers(workers, host, port)
@@ -144,13 +145,15 @@ def run_coordinator(workers=2):
 	total_time = total_end - total_start
 
 	# WYNIKI
-	print("TOP 20:", word_count)
-	print(f"MAP time:     {map_time:.6f}s")
-	print(f"REDUCE time:  {reduce_time:.6f}s")
-	print(f"TOTAL time:   {total_time:.6f}s")
+	if verbose:
+		print("TOP 20:", word_count)
+		print(f"MAP time:     {map_time:.6f}s")
+		print(f"REDUCE time:  {reduce_time:.6f}s")
+		print(f"TOTAL time:   {total_time:.6f}s")
 
 	return word_count, total_time, map_time, reduce_time
 
 
 if __name__ == "__main__":
-	run_coordinator()
+	# run_coordinator()
+	pass
