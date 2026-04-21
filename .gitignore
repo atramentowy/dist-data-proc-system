@@ -3,3 +3,8 @@
 __pycache__/
 .idea/
 .vscode/
+
+# not compressed datasets
+large_dataset/
+medium_dataset/
+small_dataset/
